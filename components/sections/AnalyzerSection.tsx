@@ -15,6 +15,23 @@ import {
 import { ScoreRing } from "@/components/ui/score-ring";
 import type { ATSResult } from "@/lib/types";
 
+function getDynamicCoachTip(bullet: string): string {
+  const lower = bullet.toLowerCase();
+  if (lower.includes("reduce") || lower.includes("%")) {
+    return "Great start. Add baseline vs final numbers (e.g., 12h to 7h weekly) and how you measured the improvement.";
+  }
+  if (lower.includes("manage") || lower.includes("led")) {
+    return "Clarify scope: team size, timeline, and outcome so ownership is obvious.";
+  }
+  if (lower.includes("built") || lower.includes("develop")) {
+    return "Specify stack + user impact + release result (adoption, performance, revenue, or time saved).";
+  }
+  if (lower.includes("sql") || lower.includes("database")) {
+    return "Mention query tuning/indexing/data volume and measurable speedup to strengthen technical credibility.";
+  }
+  return "Replace generic wording with one concrete action, one measurable outcome, and one business/user impact.";
+}
+
 export function AnalyzerSection() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
@@ -46,16 +63,19 @@ export function AnalyzerSection() {
       formData.append("targetRole", targetRole);
       formData.append("targetCompany", targetCompany);
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 35000);
       const res = await fetch("/api/analyze", {
         method: "POST",
         body: formData,
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Analysis failed");
       setResult(data);
       setActiveTab("overview");
     } catch (e: any) {
-      setError(e.message);
+      setError(e?.name === "AbortError" ? "Analysis timed out. Please try again." : e.message);
     } finally {
       setLoading(false);
     }
@@ -496,7 +516,7 @@ export function AnalyzerSection() {
                                 Tip
                               </div>
                               <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl rounded-tl-none px-4 py-3 text-sm text-rose-100">
-                                Quantify this bullet with metrics (%, users, revenue, time saved) to increase recruiter confidence.
+                                {getDynamicCoachTip(b.original_bullet)}
                               </div>
                             </div>
                           </div>

@@ -189,36 +189,44 @@ async function readResumeText(req: NextRequest): Promise<string> {
 }
 
 async function generateWithGemini(apiKey: string, prompt: string): Promise<string | null> {
-  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
   for (const model of models) {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: "application/json",
-          },
-        }),
-      }
-    );
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.2,
+              responseMimeType: "application/json",
+            },
+          }),
+        }
+      ).finally(() => clearTimeout(timeout));
 
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error(`Gemini model ${model} failed:`, txt);
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error(`Gemini model ${model} failed:`, txt);
+        continue;
+      }
+
+      const payload = await res.json();
+      const raw =
+        payload?.candidates?.[0]?.content?.parts
+          ?.map((p: { text?: string }) => p.text || "")
+          .join("\n")
+          .trim() || "";
+      if (raw) return raw;
+    } catch (err) {
+      console.error(`Gemini model ${model} request failed:`, err);
       continue;
     }
-
-    const payload = await res.json();
-    const raw =
-      payload?.candidates?.[0]?.content?.parts
-        ?.map((p: { text?: string }) => p.text || "")
-        .join("\n")
-        .trim() || "";
-    if (raw) return raw;
   }
   return null;
 }

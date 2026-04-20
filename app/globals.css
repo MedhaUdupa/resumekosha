@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --brand: #ef4444;
-  --brand-light: #fb7185;
+  --brand: #2563eb;
+  --brand-light: #60a5fa;
 }
 
 html {
@@ -24,17 +24,17 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #111118; }
-::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #2563eb; border-radius: 3px; }
 
 /* Glow utilities */
 .glow-indigo {
-  box-shadow: 0 0 40px rgba(239, 68, 68, 0.25), 0 0 80px rgba(239, 68, 68, 0.12);
+  box-shadow: 0 0 40px rgba(37, 99, 235, 0.25), 0 0 80px rgba(37, 99, 235, 0.1);
 }
 .glow-text {
-  text-shadow: 0 0 40px rgba(248, 113, 113, 0.5);
+  text-shadow: 0 0 40px rgba(96, 165, 250, 0.5);
 }
 .gradient-text {
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 45%, #fb7185 100%);
+  background: linear-gradient(135deg, #60a5fa 0%, #2563eb 45%, #22d3ee 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -43,20 +43,20 @@ body {
   border: 1px solid transparent;
   background-clip: padding-box;
   background-image: linear-gradient(#111118, #111118),
-    linear-gradient(135deg, #ef4444, #f97316, #fb7185);
+    linear-gradient(135deg, #2563eb, #1d4ed8, #06b6d4);
   background-origin: border-box;
 }
 
-/* Red palette remap for existing indigo utility classes */
+/* Keep indigo utility classes consistently blue-toned */
 @layer utilities {
-  .bg-indigo-600 { background-color: rgb(220 38 38) !important; }
-  .hover\:bg-indigo-500:hover { background-color: rgb(239 68 68) !important; }
-  .text-indigo-400 { color: rgb(248 113 113) !important; }
-  .text-indigo-300 { color: rgb(252 165 165) !important; }
-  .border-indigo-500\/30 { border-color: rgba(239, 68, 68, 0.3) !important; }
-  .border-indigo-500\/20 { border-color: rgba(239, 68, 68, 0.2) !important; }
-  .bg-indigo-500\/10 { background-color: rgba(239, 68, 68, 0.1) !important; }
-  .bg-indigo-500\/5 { background-color: rgba(239, 68, 68, 0.06) !important; }
+  .bg-indigo-600 { background-color: rgb(37 99 235) !important; }
+  .hover\:bg-indigo-500:hover { background-color: rgb(59 130 246) !important; }
+  .text-indigo-400 { color: rgb(96 165 250) !important; }
+  .text-indigo-300 { color: rgb(147 197 253) !important; }
+  .border-indigo-500\/30 { border-color: rgba(37, 99, 235, 0.3) !important; }
+  .border-indigo-500\/20 { border-color: rgba(37, 99, 235, 0.2) !important; }
+  .bg-indigo-500\/10 { background-color: rgba(37, 99, 235, 0.1) !important; }
+  .bg-indigo-500\/5 { background-color: rgba(37, 99, 235, 0.06) !important; }
 }
 
 @layer utilities {
