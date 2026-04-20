@@ -36,12 +36,6 @@ function fallbackReply(question: string, result?: ATSResult): string {
       ? `Your biggest gaps are: ${missing.slice(0, 4).join(", ")}. Add proof of these in projects and skills.`
       : "Your resume is broadly aligned. Next improvement is to add stronger quantified outcomes.";
   }
-  if (q.includes("experience")) {
-    if ((result?.analytics_data.total_months_experience || 0) <= 0) {
-      return "I could not find enough clear date ranges to estimate experience yet. Add start-end dates for each role (e.g., Jan 2022 - Mar 2024) to improve this.";
-    }
-    return "Estimated experience is derived from explicit years/date ranges in your resume text. Add exact role dates to improve confidence.";
-  }
   if (q.includes("improve") || q.includes("better")) {
     return "Focus on impact bullets: action + tool + metric + business outcome. Replace vague lines with quantified achievements.";
   }
@@ -73,7 +67,6 @@ export async function POST(req: NextRequest) {
       ? JSON.stringify(
           {
             role: result.analytics_data.inferred_primary_role,
-            estimated_experience_months: result.analytics_data.total_months_experience,
             skills: result.analytics_data.categorized_skills,
             blind_spots: result.ats_scoring.blind_spot_detection,
             trust_score: result.authenticity_index.trust_score,
