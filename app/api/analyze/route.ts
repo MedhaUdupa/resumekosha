@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 type AnalyzeInput = {
   resumeText: string;
-  jobDescription?: string;
+  jobDescription: string;
   targetRole?: string;
   targetCompany?: string;
 };
@@ -340,11 +340,12 @@ async function readResumeText(req: NextRequest): Promise<string> {
   const body = await req.json();
   const resumeText = body?.resumeText?.trim();
   if (!resumeText) throw new Error("Missing resume text.");
+  const jobDescription = String(body?.jobDescription || "").trim();
   return JSON.stringify({
     resumeText: resumeText.replace(/\0/g, "").slice(0, 20000),
     targetRole: String(body?.targetRole || "").trim(),
     targetCompany: String(body?.targetCompany || "").trim(),
-    jobDescription: String(body?.jobDescription || "").trim(),
+    jobDescription,
   } satisfies AnalyzeInput);
 }
 
@@ -403,6 +404,9 @@ export async function POST(req: NextRequest) {
     const jobDescription = parsed.jobDescription;
     const targetRole = parsed.targetRole;
     const targetCompany = parsed.targetCompany;
+    if (!jobDescription?.trim()) {
+      return NextResponse.json({ error: "Job description is required." }, { status: 400 });
+    }
 
     const benchmarkResumes = pickBenchmarkResumes(resumeText, 6);
     const benchmarkSkills = Array.from(

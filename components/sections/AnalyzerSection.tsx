@@ -53,7 +53,7 @@ export function AnalyzerSection() {
     },
   ]);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [jobDescription, setJobDescription] = useState("");
+  const [jd, setJd] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [targetCompany, setTargetCompany] = useState("");
   const [result, setResult] = useState<ATSResult | null>(null);
@@ -78,7 +78,7 @@ export function AnalyzerSection() {
       }
       const formData = new FormData();
       formData.append("resumeFile", resumeFile);
-      formData.append("jobDescription", jobDescription);
+      formData.append("jobDescription", jd);
       formData.append("targetRole", targetRole);
       formData.append("targetCompany", targetCompany);
 
@@ -289,19 +289,24 @@ export function AnalyzerSection() {
               className="w-full bg-[#111118] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50"
             />
           </div>
-          <textarea
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-            rows={5}
-            placeholder="Optional: paste target job description"
-            className="mt-3 w-full bg-[#111118] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 resize-none focus:outline-none focus:border-indigo-500/50"
-          />
+          <div className="mt-5">
+            <label className="text-xs uppercase tracking-widest text-slate-500 mb-2 block">
+              Job Description <span className="text-red-400">*</span>
+            </label>
+            <textarea
+              value={jd}
+              onChange={(e) => setJd(e.target.value)}
+              rows={7}
+              className="w-full bg-[#111118] border border-white/5 rounded-xl px-4 py-3 text-sm text-slate-300 font-mono resize-none focus:outline-none focus:border-indigo-500/50 transition-colors placeholder-slate-700"
+              placeholder="Paste the job description here..."
+            />
+          </div>
         </div>
 
         <div className="flex justify-center mb-10">
           <button
             onClick={analyze}
-            disabled={loading || !resumeFile}
+            disabled={loading || !resumeFile || !jd.trim()}
             className="flex items-center gap-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-10 py-4 rounded-xl font-semibold text-base transition-all duration-200 glow-indigo"
           >
             {loading ? (
