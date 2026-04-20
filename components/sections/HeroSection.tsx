@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { ArrowRight, Shield, TrendingUp } from "lucide-react";
+import { ArrowRight, Shield, TrendingUp, LineChart } from "lucide-react";
 import { ContainerScroll } from "@/components/ui/container-scroll-animation";
 import { Typewriter } from "@/components/ui/typewriter";
 
@@ -109,7 +109,7 @@ export function HeroSection() {
           {[
             [Shield, "Trust Scored"],
             [TrendingUp, "Market Benchmarked"],
-            [Shield, "Data-Driven Insights"],
+            [LineChart, "Data-Driven Insights"],
           ].map(([Icon, label]: any) => (
             <div key={label} className="flex items-center gap-2">
               <Icon className="w-4 h-4 text-indigo-400" />

@@ -6,6 +6,8 @@ import { extractKeywords, estimateExperience, truncateResume } from "@/lib/resum
 import type { ATSResult, KaggleResume } from "@/lib/types";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
+export const runtime = "nodejs";
+
 type AnalyzeInput = {
   resumeText: string;
   jobDescription?: string;

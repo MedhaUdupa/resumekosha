@@ -4,8 +4,32 @@ import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 type Message = { role: "user" | "assistant"; content: string };
 
+function extractWeakBullets(result?: ATSResult): string[] {
+  return (
+    result?.interactive_chatbot?.weak_bullets_identified
+      ?.map((b) => b.original_bullet?.trim())
+      .filter(Boolean) || []
+  );
+}
+
+function makeRewriteFromBullet(bullet: string): string {
+  const lower = bullet.toLowerCase();
+  if (lower.includes("performance")) {
+    return `- Improved website performance by reducing LCP from 3.8s to 2.1s and cutting JS bundle size by 22% using route-level code splitting and lazy loading.\n- Increased Core Web Vitals pass rate from 61% to 89% across mobile sessions by optimizing image delivery and removing render-blocking scripts.`;
+  }
+  if (lower.includes("frontend") || lower.includes("react")) {
+    return `- Built a React-based dashboard used by 1,800+ monthly active users, reducing task completion time by 31% through reusable component architecture.\n- Shipped 12 production UI features in 10 weeks with accessibility and performance checks, improving user retention by 14%.`;
+  }
+  return `- Rewrote this bullet with impact: [Strong action verb] + [what you built/owned] + [quantified outcome] + [business/user impact].\n- Example format: "Designed and launched X using Y, which improved Z by N% for M users."`;
+}
+
 function fallbackReply(question: string, result?: ATSResult): string {
   const q = question.toLowerCase();
+  const weakBullets = extractWeakBullets(result);
+  if (q.includes("rewrite") || q.includes("bullet")) {
+    const chosen = weakBullets[0] || "Worked on frontend development using React";
+    return `Here are improved bullet options based on your analysis context:\n${makeRewriteFromBullet(chosen)}\n\nIf you share your exact project metric, I will tailor these to your real numbers.`;
+  }
   if (q.includes("blind spot") || q.includes("missing")) {
     const missing = result?.ats_scoring.blind_spot_detection.missing_critical_skills || [];
     return missing.length
@@ -51,6 +75,7 @@ export async function POST(req: NextRequest) {
             blind_spots: result.ats_scoring.blind_spot_detection,
             trust_score: result.authenticity_index.trust_score,
             improvements: result.resume_improvement,
+            weak_bullets: extractWeakBullets(result),
           },
           null,
           2
@@ -65,9 +90,12 @@ export async function POST(req: NextRequest) {
     const prompt = `You are ResumeKosha AI Coach.
 Rules:
 - Reply only in English.
-- Be concise and actionable.
-- If user asks for resume rewrites, give improved bullet examples.
+- Be concise and actionable. Never return generic filler.
+- Ground every answer in the resume analysis context below.
+- If user asks for bullet rewrites, rewrite only from weak_bullets in context and output 2 improved bullets with measurable impact.
+- For missing metrics, ask one focused follow-up question and provide a best-effort example anyway.
 - Prioritize quantified impact and ATS relevance.
+- Never invent random company, product, or role details not implied by context.
 
 Analysis context:
 ${context}

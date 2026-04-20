@@ -580,7 +580,7 @@ export function AnalyzerSection() {
                         {chatMessages.map((m, idx) => (
                           <div key={`${m.role}-${idx}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                             <div
-                              className={`max-w-[85%] text-sm rounded-xl px-4 py-3 ${
+                              className={`max-w-[85%] text-sm rounded-xl px-4 py-3 whitespace-pre-wrap leading-relaxed ${
                                 m.role === "user"
                                   ? "bg-indigo-600 text-white"
                                   : "bg-[#111118] border border-white/10 text-slate-200"
