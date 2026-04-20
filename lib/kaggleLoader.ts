@@ -17,12 +17,18 @@ export function loadKaggleResumes(): KaggleResume[] {
 
   const raw = fs.readFileSync(csvPath, "utf-8");
   const records = parse(raw, { columns: true, skip_empty_lines: true });
+  if (!records || records.length === 0) {
+    cachedResumes = getDemoResumes();
+    return cachedResumes;
+  }
 
-  cachedResumes = records.map((r: any, i: number) => ({
+  const mapped = records.map((r: any, i: number) => ({
     id: String(i),
     category: r.Category || r.category || "Unknown",
     resume_text: r.Resume_str || r.resume_text || r.Resume || "",
   }));
+
+  cachedResumes = mapped.length ? mapped : getDemoResumes();
 
   return cachedResumes ?? getDemoResumes();
 }

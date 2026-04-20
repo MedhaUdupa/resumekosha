@@ -24,8 +24,19 @@ export interface ATSResult {
     weak_bullets_identified: Array<{
       original_bullet: string;
       probing_question_english: string;
-      probing_question_marathi: string;
     }>;
+  };
+  resume_improvement?: {
+    semantic_job_match_summary: string;
+    impact_enforcer_suggestions: string[];
+    skill_gap_suggestions: string[];
+    section_balance_suggestions: string[];
+    cliche_fluff_flags: string[];
+    role_suggestions: string[];
+  };
+  ats_parsing_sandbox?: {
+    extracted_preview: string;
+    parser_warnings: string[];
   };
   alternate_universe_personas: {
     corporate_formal_summary: string;

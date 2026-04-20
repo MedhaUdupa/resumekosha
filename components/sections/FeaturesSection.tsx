@@ -37,7 +37,7 @@ const FEATURES = [
   {
     icon: MessageSquare,
     title: "AI Coaching Chatbot",
-    desc: "Identifies the 2 weakest resume bullets and asks targeted questions to extract real metrics. Available in English & Marathi.",
+    desc: "Identifies weak resume bullets and asks targeted, interactive questions in English to extract real metrics.",
     color: "text-amber-400",
     bg: "bg-amber-500/10 border-amber-500/20",
     score: "Stage 4",

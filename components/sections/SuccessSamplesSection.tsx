@@ -3,6 +3,27 @@ import { truncateResume } from "@/lib/resumeParser";
 
 export function SuccessSamplesSection() {
   const samples = getSuccessfulResumeSamples(6);
+  const fallbackSamples = [
+    {
+      id: "sample_1",
+      category: "Frontend",
+      resume_text:
+        "Built a React + Next.js dashboard used by 30k monthly users; improved Lighthouse performance from 62 to 91 and reduced page load by 41%. Led migration to TypeScript and introduced CI checks that cut production bugs by 28%.",
+    },
+    {
+      id: "sample_2",
+      category: "Data Science",
+      resume_text:
+        "Developed churn prediction models in Python that increased retention campaigns ROI by 22%. Automated ETL with Airflow and reduced weekly reporting time from 7 hours to 40 minutes.",
+    },
+    {
+      id: "sample_3",
+      category: "Backend",
+      resume_text:
+        "Designed microservices in Node.js and PostgreSQL handling 1.5M+ API calls/day. Reduced p95 latency by 37% through query optimization, caching, and observability-driven tuning.",
+    },
+  ];
+  const visibleSamples = samples.length > 0 ? samples : fallbackSamples;
 
   return (
     <section id="samples" className="py-28 bg-[#0d0d15] scroll-mt-28">
@@ -20,7 +41,7 @@ export function SuccessSamplesSection() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {samples.map((sample) => (
+          {visibleSamples.map((sample) => (
             <article
               key={sample.id}
               className="bg-[#111118] border border-white/5 rounded-2xl p-5 h-full"

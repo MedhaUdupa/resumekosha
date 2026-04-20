@@ -10,12 +10,16 @@ import {
   Zap,
   FileText,
   Send,
+  Sparkles,
 } from "lucide-react";
 import { ScoreRing } from "@/components/ui/score-ring";
 import type { ATSResult } from "@/lib/types";
 
 export function AnalyzerSection() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [jobDescription, setJobDescription] = useState("");
+  const [targetRole, setTargetRole] = useState("");
+  const [targetCompany, setTargetCompany] = useState("");
   const [result, setResult] = useState<ATSResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -23,8 +27,9 @@ export function AnalyzerSection() {
   const [emailTo, setEmailTo] = useState("");
   const [sendingReport, setSendingReport] = useState(false);
   const [emailMessage, setEmailMessage] = useState("");
+  const [selectedTips, setSelectedTips] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "blindspots" | "trust" | "coach" | "personas" | "email"
+    "overview" | "blindspots" | "trust" | "coach" | "personas" | "email" | "improve"
   >("overview");
 
   async function analyze() {
@@ -37,6 +42,9 @@ export function AnalyzerSection() {
       }
       const formData = new FormData();
       formData.append("resumeFile", resumeFile);
+      formData.append("jobDescription", jobDescription);
+      formData.append("targetRole", targetRole);
+      formData.append("targetCompany", targetCompany);
 
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -100,9 +108,48 @@ export function AnalyzerSection() {
     { id: "blindspots", label: "Blind Spots" },
     { id: "trust", label: "Trust Score" },
     { id: "coach", label: "AI Coach" },
+    { id: "improve", label: "Improve Resume" },
     { id: "personas", label: "Personas" },
     { id: "email", label: "Email Teaser" },
   ] as const;
+
+  const suggestedRoles = result
+    ? Array.from(
+        new Set([
+          ...(result.resume_improvement?.role_suggestions || []),
+          result.analytics_data.inferred_primary_role,
+          result.analytics_data.categorized_skills.technical_frameworks.some((s) =>
+            ["react", "next.js", "typescript"].includes(s.toLowerCase())
+          )
+            ? "Frontend Engineer"
+            : "",
+          result.analytics_data.categorized_skills.technical_frameworks.some((s) =>
+            ["python", "tensorflow", "pytorch", "scikit-learn"].includes(s.toLowerCase())
+          )
+            ? "ML / Data Scientist"
+            : "",
+          result.analytics_data.categorized_skills.tools_and_platforms.some((s) =>
+            ["aws", "docker", "kubernetes"].includes(s.toLowerCase())
+          )
+            ? "Platform Engineer"
+            : "",
+        ].filter(Boolean))
+      )
+    : [];
+
+  const improvements = result?.resume_improvement;
+  const improvementPool = improvements
+    ? [
+        ...improvements.impact_enforcer_suggestions,
+        ...improvements.skill_gap_suggestions,
+        ...improvements.section_balance_suggestions,
+        ...improvements.cliche_fluff_flags,
+      ]
+    : [];
+
+  const toggleTip = (tip: string) => {
+    setSelectedTips((prev) => (prev.includes(tip) ? prev.filter((x) => x !== tip) : [...prev, tip]));
+  };
 
   return (
     <section id="analyzer" className="py-32 relative scroll-mt-28">
@@ -150,6 +197,27 @@ export function AnalyzerSection() {
             </div>
             <p className="text-xs text-slate-500">Upload one PDF file to begin analysis.</p>
           </div>
+          <div className="mt-4 grid md:grid-cols-2 gap-3">
+            <input
+              value={targetRole}
+              onChange={(e) => setTargetRole(e.target.value)}
+              placeholder="Target role (optional) e.g. Frontend Engineer"
+              className="w-full bg-[#111118] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50"
+            />
+            <input
+              value={targetCompany}
+              onChange={(e) => setTargetCompany(e.target.value)}
+              placeholder="Target company (optional)"
+              className="w-full bg-[#111118] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50"
+            />
+          </div>
+          <textarea
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+            rows={5}
+            placeholder="Optional: paste target job description for semantic matching"
+            className="mt-3 w-full bg-[#111118] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 resize-none focus:outline-none focus:border-indigo-500/50"
+          />
         </div>
 
         <div className="flex justify-center mb-10">
@@ -289,12 +357,32 @@ export function AnalyzerSection() {
                         {result.analytics_data.inferred_primary_role}
                       </span>
                     </div>
+                    {suggestedRoles.length > 0 && (
+                      <div className="mt-2 bg-[#0a0a0f] rounded-xl p-4">
+                        <div className="text-slate-400 text-sm mb-2">Suggested Roles</div>
+                        <div className="flex flex-wrap gap-2">
+                          {suggestedRoles.map((role) => (
+                            <button
+                              key={role}
+                              type="button"
+                              onClick={() => setTargetRole(role)}
+                              className="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 rounded-full px-3 py-1"
+                            >
+                              {role}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="mt-2 bg-[#0a0a0f] rounded-xl p-4 flex items-center justify-between">
-                      <span className="text-slate-400 text-sm">Total Experience</span>
+                      <span className="text-slate-400 text-sm">Estimated Experience</span>
                       <span className="text-white font-semibold">
                         {result.analytics_data.total_months_experience} months
                       </span>
                     </div>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Experience is estimated from explicit years and date ranges detected in your resume text.
+                    </p>
                   </div>
                 )}
 
@@ -404,16 +492,111 @@ export function AnalyzerSection() {
                               </div>
                             </div>
                             <div className="flex gap-3">
-                              <div className="w-7 h-7 rounded-full bg-orange-600 flex items-center justify-center flex-shrink-0 text-xs font-bold">
-                                मर
+                              <div className="w-7 h-7 rounded-full bg-rose-600 flex items-center justify-center flex-shrink-0 text-xs font-bold">
+                                Tip
                               </div>
-                              <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl rounded-tl-none px-4 py-3 text-sm text-orange-100">
-                                {b.probing_question_marathi}
+                              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl rounded-tl-none px-4 py-3 text-sm text-rose-100">
+                                Quantify this bullet with metrics (%, users, revenue, time saved) to increase recruiter confidence.
                               </div>
                             </div>
                           </div>
                         </div>
                       )
+                    )}
+                  </div>
+                )}
+
+                {/* IMPROVEMENTS */}
+                {activeTab === "improve" && improvements && (
+                  <div className="space-y-5">
+                    <div className="bg-[#0a0a0f] rounded-xl p-5 border border-white/5">
+                      <div className="text-xs text-slate-500 uppercase tracking-widest mb-2">Semantic Match Summary</div>
+                      <p className="text-slate-300 text-sm leading-relaxed">{improvements.semantic_job_match_summary}</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-[#0a0a0f] rounded-xl p-5 border border-white/5">
+                        <div className="text-xs text-rose-300 uppercase tracking-widest mb-3">Impact Enforcer</div>
+                        <div className="space-y-2">
+                          {improvements.impact_enforcer_suggestions.map((tip) => (
+                            <button
+                              key={tip}
+                              type="button"
+                              onClick={() => toggleTip(tip)}
+                              className={`w-full text-left text-sm rounded-lg px-3 py-2 transition-colors ${
+                                selectedTips.includes(tip)
+                                  ? "bg-rose-500/20 border border-rose-500/40 text-rose-100"
+                                  : "bg-[#111118] border border-white/10 text-slate-300 hover:border-rose-500/30"
+                              }`}
+                            >
+                              {tip}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-[#0a0a0f] rounded-xl p-5 border border-white/5">
+                        <div className="text-xs text-rose-300 uppercase tracking-widest mb-3">Skill Gap Analysis</div>
+                        <ul className="space-y-2">
+                          {improvements.skill_gap_suggestions.map((tip) => (
+                            <li key={tip} className="text-sm text-slate-300 bg-[#111118] border border-white/10 rounded-lg px-3 py-2">
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-[#0a0a0f] rounded-xl p-5 border border-white/5">
+                        <div className="text-xs text-rose-300 uppercase tracking-widest mb-3">Section Balancing</div>
+                        <ul className="space-y-2">
+                          {improvements.section_balance_suggestions.map((tip) => (
+                            <li key={tip} className="text-sm text-slate-300 bg-[#111118] border border-white/10 rounded-lg px-3 py-2">
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-[#0a0a0f] rounded-xl p-5 border border-white/5">
+                        <div className="text-xs text-rose-300 uppercase tracking-widest mb-3">Cliche & Fluff Filter</div>
+                        <ul className="space-y-2">
+                          {improvements.cliche_fluff_flags.map((tip) => (
+                            <li key={tip} className="text-sm text-slate-300 bg-[#111118] border border-white/10 rounded-lg px-3 py-2">
+                              {tip}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-rose-500/10 to-red-500/10 border border-rose-500/30 rounded-xl p-5">
+                      <div className="flex items-center gap-2 mb-3 text-rose-200">
+                        <Sparkles className="w-4 h-4" />
+                        <span className="text-sm font-semibold">Selected Improvements</span>
+                      </div>
+                      {selectedTips.length ? (
+                        <ul className="space-y-2">
+                          {selectedTips.map((tip) => (
+                            <li key={tip} className="text-sm text-rose-100">- {tip}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-rose-100/80">Click any Impact Enforcer suggestion to add it to your action plan.</p>
+                      )}
+                    </div>
+
+                    {result.ats_parsing_sandbox && (
+                      <div className="bg-[#0a0a0f] rounded-xl p-5 border border-white/5">
+                        <div className="text-xs text-rose-300 uppercase tracking-widest mb-3">ATS Parsing Sandbox</div>
+                        <p className="text-sm text-slate-300 mb-3">{result.ats_parsing_sandbox.extracted_preview}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {result.ats_parsing_sandbox.parser_warnings.map((w) => (
+                            <span key={w} className="text-xs bg-amber-500/10 text-amber-200 border border-amber-500/30 rounded-full px-3 py-1">
+                              {w}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

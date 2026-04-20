@@ -10,13 +10,13 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50: "#f0f0ff",
-          100: "#e0e0fe",
-          400: "#818cfb",
-          500: "#6366f1",
-          600: "#4f46e5",
-          700: "#4338ca",
-          900: "#1e1b4b",
+          50: "#fff1f2",
+          100: "#ffe4e6",
+          400: "#fb7185",
+          500: "#ef4444",
+          600: "#dc2626",
+          700: "#be123c",
+          900: "#881337",
         },
         surface: {
           0: "#0a0a0f",
@@ -39,7 +39,7 @@ const config: Config = {
       },
       backgroundImage: {
         "grid-pattern":
-          "linear-gradient(rgba(99,102,241,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.05) 1px, transparent 1px)",
+          "linear-gradient(rgba(239,68,68,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(239,68,68,0.06) 1px, transparent 1px)",
       },
       backgroundSize: {
         grid: "40px 40px",
