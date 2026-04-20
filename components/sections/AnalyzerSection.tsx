@@ -33,6 +33,16 @@ function getDynamicCoachTip(bullet: string): string {
   return "Replace generic wording with one concrete action, one measurable outcome, and one business/user impact.";
 }
 
+function formatExperience(months: number): string {
+  const safeMonths = Number.isFinite(months) ? Math.max(0, Math.round(months)) : 0;
+  if (safeMonths <= 0) return "Not enough date evidence";
+  const years = Math.floor(safeMonths / 12);
+  const remainingMonths = safeMonths % 12;
+  if (years === 0) return `${remainingMonths} month${remainingMonths === 1 ? "" : "s"}`;
+  if (remainingMonths === 0) return `${years} year${years === 1 ? "" : "s"} (${safeMonths} months)`;
+  return `${years} year${years === 1 ? "" : "s"} ${remainingMonths} month${remainingMonths === 1 ? "" : "s"} (${safeMonths} months)`;
+}
+
 export function AnalyzerSection() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -445,11 +455,11 @@ export function AnalyzerSection() {
                     <div className="mt-2 bg-[#0a0a0f] rounded-xl p-4 flex items-center justify-between">
                       <span className="text-slate-400 text-sm">Estimated Experience</span>
                       <span className="text-white font-semibold">
-                        {result.analytics_data.total_months_experience} months
+                        {formatExperience(result.analytics_data.total_months_experience)}
                       </span>
                     </div>
                     <p className="mt-2 text-xs text-slate-500">
-                      Experience is estimated from explicit years and date ranges detected in your resume text.
+                      Estimated from explicit duration phrases and work date ranges in the uploaded resume PDF.
                     </p>
                   </div>
                 )}

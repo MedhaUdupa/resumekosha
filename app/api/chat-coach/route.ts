@@ -37,6 +37,9 @@ function fallbackReply(question: string, result?: ATSResult): string {
       : "Your resume is broadly aligned. Next improvement is to add stronger quantified outcomes.";
   }
   if (q.includes("experience")) {
+    if ((result?.analytics_data.total_months_experience || 0) <= 0) {
+      return "I could not find enough clear date ranges to estimate experience yet. Add start-end dates for each role (e.g., Jan 2022 - Mar 2024) to improve this.";
+    }
     return "Estimated experience is derived from explicit years/date ranges in your resume text. Add exact role dates to improve confidence.";
   }
   if (q.includes("improve") || q.includes("better")) {

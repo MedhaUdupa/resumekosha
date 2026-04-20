@@ -5,11 +5,21 @@ import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function formatExperience(months: number): string {
+  const safeMonths = Number.isFinite(months) ? Math.max(0, Math.round(months)) : 0;
+  if (safeMonths <= 0) return "Not enough date evidence in resume";
+  const years = Math.floor(safeMonths / 12);
+  const rem = safeMonths % 12;
+  if (years === 0) return `${rem} month${rem === 1 ? "" : "s"}`;
+  if (rem === 0) return `${years} year${years === 1 ? "" : "s"} (${safeMonths} months)`;
+  return `${years} year${years === 1 ? "" : "s"} ${rem} month${rem === 1 ? "" : "s"} (${safeMonths} months)`;
+}
+
 function buildReportHtml(result: ATSResult) {
   return `
     <h2>ResumeKosha Analysis Report</h2>
     <p><strong>Role:</strong> ${result.analytics_data.inferred_primary_role}</p>
-    <p><strong>Experience:</strong> ${result.analytics_data.total_months_experience} months</p>
+    <p><strong>Estimated Experience:</strong> ${formatExperience(result.analytics_data.total_months_experience)}</p>
     <p><strong>ATS Match:</strong> ${result.ats_scoring.overall_semantic_match_score}</p>
     <p><strong>Trust Score:</strong> ${result.authenticity_index.trust_score}</p>
     <p><strong>Missing Skills:</strong> ${result.ats_scoring.blind_spot_detection.missing_critical_skills.join(", ") || "None"}</p>

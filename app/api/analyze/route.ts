@@ -15,6 +15,184 @@ type AnalyzeInput = {
   targetCompany?: string;
 };
 
+function normalizeExperienceMonths(value: unknown, fallback = 0): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const rounded = Math.max(0, Math.round(parsed));
+  if (rounded > 600) return fallback;
+  return rounded;
+}
+
+function uniqueTop(values: string[], limit = 4): string[] {
+  return Array.from(
+    new Set(
+      values
+        .map((v) => v.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, limit);
+}
+
+function extractResumeBullets(resumeText: string): string[] {
+  return resumeText
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(
+      (line) =>
+        line.length > 24 &&
+        (/^[\-\u2022*]/.test(line) ||
+          /^(built|developed|designed|implemented|created|led|managed|improved|worked|helped)\b/i.test(
+            line
+          ))
+    )
+    .map((line) => line.replace(/^[\-\u2022*]\s*/, ""))
+    .slice(0, 8);
+}
+
+function buildWeakBullets(resumeText: string) {
+  const weakVerb = /(worked on|helped|responsible for|involved in|participated in)/i;
+  const hasMetric = /(\d+%|\d+\s*(users?|ms|s|sec|seconds?|minutes?|hours?|days?|months?|years?)|\$\d+)/i;
+  const candidates = extractResumeBullets(resumeText).filter(
+    (line) => weakVerb.test(line) || !hasMetric.test(line)
+  );
+
+  const picked = candidates.slice(0, 3);
+  if (picked.length === 0) {
+    return [
+      {
+        original_bullet: "Built and shipped project features using modern development tools.",
+        probing_question_english:
+          "Which feature did you own, what stack did you use, and what measurable result did it produce?",
+      },
+    ];
+  }
+
+  return picked.map((bullet) => ({
+    original_bullet: bullet,
+    probing_question_english:
+      "Can you add one metric (%, users, time saved, latency, revenue) and one clear ownership detail to this bullet?",
+  }));
+}
+
+function inferRoleSuggestions(resumeText: string, primaryRole: string): string[] {
+  const lower = resumeText.toLowerCase();
+  const roles = [primaryRole];
+  if (/(react|next|frontend|ui)/.test(lower)) roles.push("Frontend Engineer");
+  if (/(node|api|backend|microservice)/.test(lower)) roles.push("Backend Engineer");
+  if (/(cyber|security|siem|phish|threat)/.test(lower)) roles.push("Cybersecurity Analyst");
+  if (/(ml|tensorflow|pytorch|data|analytics)/.test(lower)) roles.push("Data Scientist");
+  roles.push("Software Engineer");
+  return uniqueTop(roles, 4);
+}
+
+function buildResumeImprovement(
+  resumeText: string,
+  missingSkills: string[],
+  roleGuess: string,
+  jobDescription?: string,
+  targetRole?: string,
+  targetCompany?: string
+): NonNullable<ATSResult["resume_improvement"]> {
+  const bullets = extractResumeBullets(resumeText);
+  const weakBullets = buildWeakBullets(resumeText).map((x) => x.original_bullet);
+  const lower = resumeText.toLowerCase();
+  const headingOrder = {
+    education: lower.indexOf("education"),
+    experience: lower.indexOf("experience"),
+    projects: lower.indexOf("projects"),
+    skills: lower.indexOf("skills"),
+  };
+
+  const impactEnforcer = uniqueTop(
+    [
+      ...weakBullets.slice(0, 2).map(
+        (b) => `Rewrite this weak bullet with action + metric + impact: "${truncateResume(b, 110)}".`
+      ),
+      "Add measurable outcomes to each core project bullet (% improvement, users impacted, time saved, or risk reduced).",
+      bullets.length
+        ? `Prioritize your strongest project impact line near the top: "${truncateResume(bullets[0], 100)}".`
+        : "Add 2-3 bullets per project that show ownership, tech stack, and quantifiable impact.",
+    ],
+    4
+  );
+
+  const sectionBalance = uniqueTop(
+    [
+      headingOrder.projects !== -1 &&
+      headingOrder.education !== -1 &&
+      headingOrder.projects > headingOrder.education
+        ? "Move Projects above Education so recruiters see technical impact earlier."
+        : "",
+      headingOrder.experience === -1
+        ? "Add an Experience section with date ranges for internships, freelancing, or major team roles."
+        : "Ensure each Experience entry has start-end dates and 2-3 quantified bullets.",
+      "Keep Education concise (degree, college, CGPA) and allocate more space to project outcomes.",
+    ],
+    3
+  );
+
+  const fluffMatches = [
+    "hard-working",
+    "team player",
+    "detail-oriented",
+    "passionate",
+    "quick learner",
+  ].filter((term) => lower.includes(term));
+
+  const fluffFlags = uniqueTop(
+    fluffMatches.length
+      ? fluffMatches.map((term) => `Replace "${term}" with proof (achievement, metric, or ownership).`)
+      : ["Replace subjective claims with verifiable outcomes and concrete scope."],
+    3
+  );
+
+  return {
+    semantic_job_match_summary: targetRole || jobDescription
+      ? `Your resume is evaluated for ${targetRole || roleGuess}${targetCompany ? ` at ${targetCompany}` : ""}. Align top bullets to role responsibilities and required tools from the target opening.`
+      : `Your resume is benchmarked against similar ${roleGuess} profiles from backend data. Add a target role/company for sharper matching.`,
+    impact_enforcer_suggestions: impactEnforcer,
+    skill_gap_suggestions: missingSkills.length
+      ? uniqueTop(
+          missingSkills
+            .slice(0, 5)
+            .map((skill) => `Add proof of ${skill} through a project bullet, coursework, or certifications section.`),
+          4
+        )
+      : ["Your core skills align well; add one advanced tool/project outcome to stand out further."],
+    section_balance_suggestions: sectionBalance,
+    cliche_fluff_flags: fluffFlags,
+    role_suggestions: inferRoleSuggestions(resumeText, roleGuess),
+  };
+}
+
+function mergeResumeImprovement(
+  fromModel: ATSResult["resume_improvement"] | undefined,
+  deterministic: NonNullable<ATSResult["resume_improvement"]>
+): NonNullable<ATSResult["resume_improvement"]> {
+  if (!fromModel) return deterministic;
+  return {
+    semantic_job_match_summary:
+      fromModel.semantic_job_match_summary?.trim() || deterministic.semantic_job_match_summary,
+    impact_enforcer_suggestions: uniqueTop(
+      [...(fromModel.impact_enforcer_suggestions || []), ...deterministic.impact_enforcer_suggestions],
+      5
+    ),
+    skill_gap_suggestions: uniqueTop(
+      [...(fromModel.skill_gap_suggestions || []), ...deterministic.skill_gap_suggestions],
+      5
+    ),
+    section_balance_suggestions: uniqueTop(
+      [...(fromModel.section_balance_suggestions || []), ...deterministic.section_balance_suggestions],
+      4
+    ),
+    cliche_fluff_flags: uniqueTop(
+      [...(fromModel.cliche_fluff_flags || []), ...deterministic.cliche_fluff_flags],
+      4
+    ),
+    role_suggestions: uniqueTop([...(fromModel.role_suggestions || []), ...deterministic.role_suggestions], 5),
+  };
+}
+
 function makeFallbackResult(
   resumeText: string,
   benchmarkSkills: string[],
@@ -32,7 +210,7 @@ function makeFallbackResult(
   const matchPct =
     jdKeywords.size === 0 ? 62 : Math.max(10, Math.min(98, Math.round((overlap / jdKeywords.size) * 100)));
 
-  const months = estimateExperience(resumeText);
+  const months = normalizeExperienceMonths(estimateExperience(resumeText), 0);
 
   const technical_frameworks = [...resumeKeywords].filter((k) =>
     ["react", "next", "tensorflow", "pytorch", "scikit-learn", "graphql"].some((x) => k.includes(x))
@@ -56,11 +234,20 @@ function makeFallbackResult(
 
   const topTech = [...resumeKeywords].slice(0, 5);
   const topTools = [...benchmarkSkills].filter((s) => !topTech.includes(s)).slice(0, 5);
+  const dynamicImprovement = buildResumeImprovement(
+    resumeText,
+    missing,
+    roleGuess,
+    jobDescription,
+    targetRole,
+    targetCompany
+  );
+  const dynamicWeakBullets = buildWeakBullets(resumeText);
 
   return {
     analytics_data: {
       inferred_primary_role: roleGuess,
-      total_months_experience: months || 24,
+      total_months_experience: months,
       categorized_skills: {
         technical_frameworks: technical_frameworks.length ? technical_frameworks : (topTech.length ? topTech : ["react", "typescript", "next.js"]),
         tools_and_platforms: tools_and_platforms.length ? tools_and_platforms : (topTools.length ? topTools : ["git", "docker", "aws"]),
@@ -82,38 +269,9 @@ function makeFallbackResult(
       chronological_discrepancies: [],
     },
     interactive_chatbot: {
-      weak_bullets_identified: [
-        {
-          original_bullet: "Worked on frontend development using React",
-          probing_question_english: "What feature did you ship, and how did it impact users or performance (numbers if possible)?",
-        },
-        {
-          original_bullet: "Helped improve the website performance",
-          probing_question_english: "Which metric improved (LCP, TTI, bundle size) and by how much? What did you change?",
-        },
-      ],
+      weak_bullets_identified: dynamicWeakBullets,
     },
-    resume_improvement: {
-      semantic_job_match_summary: targetRole || jobDescription
-        ? `Your resume is being evaluated for ${targetRole}${targetCompany ? ` at ${targetCompany}` : ""}. You should align your top projects with responsibilities from this role.`
-        : "Add a specific target role and company for sharper semantic matching.",
-      impact_enforcer_suggestions: [
-        "Replace weak verbs like 'worked on' with 'built', 'designed', or 'implemented'.",
-        "Add measurable outcomes to each project bullet (%, time saved, users impacted).",
-      ],
-      skill_gap_suggestions: missing.length
-        ? missing.slice(0, 4).map((s) => `Consider adding evidence for ${s} in your projects or skills section.`)
-        : ["Your skill stack is broadly aligned; strengthen advanced tooling examples."],
-      section_balance_suggestions: [
-        "Place Projects above Coursework if you are applying for engineering roles.",
-        "Keep Education concise; prioritize technical impact and internships.",
-      ],
-      cliche_fluff_flags: [
-        "Avoid phrases like 'hard-working team player' without proof.",
-        "Replace subjective claims with project outcomes and ownership scope.",
-      ],
-      role_suggestions: [roleGuess, "Software Engineer", "Frontend Engineer", "Product Engineer"],
-    },
+    resume_improvement: dynamicImprovement,
     ats_parsing_sandbox: {
       extracted_preview: truncateResume(resumeText.replace(/\s+/g, " "), 380),
       parser_warnings: [
@@ -261,8 +419,17 @@ export async function POST(req: NextRequest) {
     const marketContext = benchmarkResumes
       .map((r) => `[${r.category}]: ${truncateResume(r.resume_text, 400)}`)
       .join("\n\n---\n\n");
-    const inferredMonths = estimateExperience(resumeText) || 24;
+    const inferredMonths = normalizeExperienceMonths(estimateExperience(resumeText), 0);
     const benchmarkSkillText = benchmarkSkills.slice(0, 20).join(", ");
+    const deterministicImprovement = buildResumeImprovement(
+      resumeText,
+      benchmarkSkills.filter((k) => !extractKeywords(resumeText).includes(k)).slice(0, 8),
+      targetRole || "Software Engineer",
+      jobDescription,
+      targetRole,
+      targetCompany
+    );
+    const deterministicWeakBullets = buildWeakBullets(resumeText);
 
     const systemPrompt = `You are an elite ATS system and career coach.
 Compare the candidate resume against backend benchmark data from similar resumes.
@@ -354,18 +521,23 @@ Run all 6 analysis stages and return the JSON result only.`;
     const result = JSON.parse(jsonMatch[0]) as ATSResult;
     return NextResponse.json({
       ...result,
-      resume_improvement:
-        result.resume_improvement ||
-        makeFallbackResult(resumeText, benchmarkSkills, jobDescription, targetRole, targetCompany)
-          .resume_improvement,
+      resume_improvement: mergeResumeImprovement(result.resume_improvement, deterministicImprovement),
+      interactive_chatbot: {
+        weak_bullets_identified:
+          result.interactive_chatbot?.weak_bullets_identified?.length
+            ? result.interactive_chatbot.weak_bullets_identified
+            : deterministicWeakBullets,
+      },
       ats_parsing_sandbox: result.ats_parsing_sandbox || {
         extracted_preview: truncateResume(resumeText.replace(/\s+/g, " "), 380),
         parser_warnings: ["Keep formatting ATS-friendly with simple headings and one-column layout."],
       },
       analytics_data: {
         ...result.analytics_data,
-        total_months_experience:
-          result.analytics_data?.total_months_experience || inferredMonths,
+        total_months_experience: normalizeExperienceMonths(
+          result.analytics_data?.total_months_experience,
+          inferredMonths
+        ),
         categorized_skills: {
           technical_frameworks:
             result.analytics_data?.categorized_skills?.technical_frameworks?.length
