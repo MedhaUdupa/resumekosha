@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { label: "Features", href: "#features" },
   { label: "Analyzer", href: "#analyzer" },
   { label: "How it works", href: "#howitworks" },
-  { label: "Testimonials", href: "#testimonials" },
+  { label: "Samples", href: "#samples" },
 ] as const;
 
 export function Navbar() {

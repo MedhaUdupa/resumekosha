@@ -17,7 +17,7 @@ const STEPS = [
   },
   {
     icon: Brain,
-    title: "Claude AI analysis",
+    title: "Gemini AI analysis",
     desc: "6-stage pipeline runs in parallel: ATS scoring, blind spots, trust index, coaching.",
     num: "03",
   },

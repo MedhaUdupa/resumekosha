@@ -4,6 +4,7 @@ import pdfParse from "pdf-parse/lib/pdf-parse";
 import { loadKaggleResumes } from "@/lib/kaggleLoader";
 import { extractKeywords, estimateExperience, truncateResume } from "@/lib/resumeParser";
 import type { ATSResult, KaggleResume } from "@/lib/types";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 function makeFallbackResult(resumeText: string, benchmarkSkills: string[]): ATSResult {
   const resumeKeywords = new Set(extractKeywords(resumeText));
@@ -113,21 +114,28 @@ async function readResumeText(req: NextRequest): Promise<string> {
     const formData = await req.formData();
     const file = formData.get("resumeFile");
     if (!(file instanceof File)) throw new Error("Missing resume PDF upload.");
+    if (file.type !== "application/pdf") throw new Error("Only PDF files are allowed.");
+    if (file.size > 5 * 1024 * 1024) throw new Error("PDF is too large. Max size is 5MB.");
     const bytes = Buffer.from(await file.arrayBuffer());
     const parsed = await pdfParse(bytes);
     const text = parsed.text?.trim();
     if (!text) throw new Error("Could not extract text from uploaded PDF.");
-    return text;
+    return text.replace(/\0/g, "").slice(0, 20000);
   }
 
   const body = await req.json();
   const resumeText = body?.resumeText?.trim();
   if (!resumeText) throw new Error("Missing resume text.");
-  return resumeText;
+  return resumeText.replace(/\0/g, "").slice(0, 20000);
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req.headers.get("x-forwarded-for"));
+    if (!checkRateLimit(`analyze:${ip}`, 20, 10 * 60 * 1000)) {
+      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    }
+
     const resumeText = await readResumeText(req);
 
     const benchmarkResumes = pickBenchmarkResumes(resumeText, 6);

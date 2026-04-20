@@ -11,7 +11,7 @@ export function Footer() {
           <span className="text-white font-bold">ResumeKosha</span>
         </div>
         <p className="text-slate-600 text-sm">
-          Built with Claude AI · Kaggle Resume Dataset · Next.js 14
+          Built with Gemini AI · Kaggle Resume Dataset · Next.js 14
         </p>
         <div className="flex gap-6 text-sm text-slate-600">
           <a href="#" className="hover:text-slate-400 transition-colors">

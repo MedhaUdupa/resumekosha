@@ -43,6 +43,19 @@ export function getCategories(): string[] {
   return [...new Set(all.map((r) => r.category))].sort();
 }
 
+export function getSuccessfulResumeSamples(n = 6): KaggleResume[] {
+  const all = loadKaggleResumes();
+  const signalRegex =
+    /(reduced|increased|improved|achieved|led|managed|delivered|optimized|promoted|award|\d+%|\$\d+)/i;
+
+  const strong = all.filter(
+    (r) => signalRegex.test(r.resume_text) && r.resume_text.trim().length > 300
+  );
+
+  const pool = strong.length ? strong : all;
+  return pool.sort(() => Math.random() - 0.5).slice(0, n);
+}
+
 function getDemoResumes(): KaggleResume[] {
   return [
     {

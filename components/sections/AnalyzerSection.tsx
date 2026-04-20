@@ -8,6 +8,8 @@ import {
   Check,
   AlertTriangle,
   Zap,
+  FileText,
+  Send,
 } from "lucide-react";
 import { ScoreRing } from "@/components/ui/score-ring";
 import type { ATSResult } from "@/lib/types";
@@ -18,6 +20,9 @@ export function AnalyzerSection() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [sendingReport, setSendingReport] = useState(false);
+  const [emailMessage, setEmailMessage] = useState("");
   const [activeTab, setActiveTab] = useState<
     "overview" | "blindspots" | "trust" | "coach" | "personas" | "email"
   >("overview");
@@ -56,6 +61,40 @@ export function AnalyzerSection() {
     }
   };
 
+  async function sendReport() {
+    if (!result) return;
+    setEmailMessage("");
+    try {
+      setSendingReport(true);
+      const res = await fetch("/api/send-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: emailTo, result }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 503) {
+          const subject = encodeURIComponent("ResumeKosha Analysis Report");
+          const body = encodeURIComponent(
+            `ATS Match: ${result.ats_scoring.overall_semantic_match_score}\n` +
+              `Trust Score: ${result.authenticity_index.trust_score}\n` +
+              `Role: ${result.analytics_data.inferred_primary_role}\n\n` +
+              `Email Teaser:\n${result.email_marketing.freemium_teaser_copy}`
+          );
+          window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`;
+          setEmailMessage("Opened your email app because SMTP is not configured on server.");
+          return;
+        }
+        throw new Error(data.error || "Could not send report.");
+      }
+      setEmailMessage("Report sent successfully.");
+    } catch (e: any) {
+      setEmailMessage(e.message || "Failed to send report.");
+    } finally {
+      setSendingReport(false);
+    }
+  }
+
   const TABS = [
     { id: "overview", label: "Overview" },
     { id: "blindspots", label: "Blind Spots" },
@@ -90,17 +129,26 @@ export function AnalyzerSection() {
           <label className="text-xs uppercase tracking-widest text-slate-500 mb-2 block text-center">
             Resume PDF
           </label>
-          <div className="bg-[#111118] border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-4">
+          <div className="bg-[#111118] border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-5">
             <Upload className="w-8 h-8 text-indigo-400" />
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
-              className="w-full text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-500"
-            />
-            <p className="text-xs text-slate-500">
-              {resumeFile ? `Selected: ${resumeFile.name}` : "Upload one PDF file to begin analysis."}
-            </p>
+            <div className="w-full flex items-center gap-5">
+              <label className="inline-flex cursor-pointer items-center bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                Choose file
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
+                  className="hidden"
+                />
+              </label>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-slate-300 truncate">
+                  {resumeFile ? resumeFile.name : "No file selected"}
+                </p>
+              </div>
+              <FileText className="w-5 h-5 text-slate-400 flex-shrink-0" />
+            </div>
+            <p className="text-xs text-slate-500">Upload one PDF file to begin analysis.</p>
           </div>
         </div>
 
@@ -421,6 +469,29 @@ export function AnalyzerSection() {
                       <p className="text-white text-base leading-relaxed">
                         {result.email_marketing.freemium_teaser_copy}
                       </p>
+                    </div>
+                    <div className="mt-5 bg-[#0a0a0f] border border-white/10 rounded-xl p-4">
+                      <div className="text-xs text-slate-500 uppercase tracking-widest mb-3">
+                        Send full report to email
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <input
+                          type="email"
+                          value={emailTo}
+                          onChange={(e) => setEmailTo(e.target.value)}
+                          placeholder="Enter recipient email"
+                          className="flex-1 bg-[#111118] border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50"
+                        />
+                        <button
+                          onClick={sendReport}
+                          disabled={sendingReport || !emailTo}
+                          className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                        >
+                          <Send className="w-4 h-4" />
+                          {sendingReport ? "Sending..." : "Send report"}
+                        </button>
+                      </div>
+                      {emailMessage && <p className="mt-3 text-xs text-slate-400">{emailMessage}</p>}
                     </div>
                   </div>
                 )}
