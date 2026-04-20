@@ -62,7 +62,7 @@ const FEATURES = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="py-32 relative scroll-mt-28">
+    <section id="features" className="py-32 relative scroll-mt-0">
       <div className="max-w-7xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

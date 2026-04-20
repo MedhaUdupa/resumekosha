@@ -236,7 +236,7 @@ export function AnalyzerSection() {
   }
 
   return (
-    <section id="analyzer" className="py-32 relative scroll-mt-28">
+    <section id="analyzer" className="py-32 relative scroll-mt-0">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-950/10 to-transparent pointer-events-none" />
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <motion.div
