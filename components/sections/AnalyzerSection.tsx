@@ -33,6 +33,21 @@ function getDynamicCoachTip(bullet: string): string {
   return "Replace generic wording with one concrete action, one measurable outcome, and one business/user impact.";
 }
 
+function getPasteReadyRewrite(bullet: string): string {
+  const clean = bullet.replace(/^["']|["']$/g, "").trim();
+  const lower = clean.toLowerCase();
+  if (lower.includes("performance")) {
+    return "Improved application performance by reducing page load time from [X]s to [Y]s through [specific optimization], increasing user retention by [Z]%.";
+  }
+  if (lower.includes("frontend") || lower.includes("react")) {
+    return "Built and shipped [feature/module] using React and TypeScript, improving [metric] by [X]% for [Y]+ users.";
+  }
+  if (lower.includes("security") || lower.includes("phish") || lower.includes("siem")) {
+    return "Designed and implemented [security system/feature], improving threat detection precision by [X]% and reducing incident response time by [Y]%.";
+  }
+  return `Implemented ${clean.toLowerCase()} using [tools/stack], resulting in [X]% improvement in [metric] and measurable impact on [business/user outcome].`;
+}
+
 export function AnalyzerSection() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -54,6 +69,7 @@ export function AnalyzerSection() {
   const [sendingReport, setSendingReport] = useState(false);
   const [emailMessage, setEmailMessage] = useState("");
   const [selectedTips, setSelectedTips] = useState<string[]>([]);
+  const [copiedCoachTip, setCopiedCoachTip] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "overview" | "blindspots" | "trust" | "coach" | "personas" | "email" | "improve"
   >("overview");
@@ -559,8 +575,35 @@ export function AnalyzerSection() {
                               <div className="w-7 h-7 rounded-full bg-rose-600 flex items-center justify-center flex-shrink-0 text-xs font-bold">
                                 Tip
                               </div>
-                              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl rounded-tl-none px-4 py-3 text-sm text-rose-100">
-                                {getDynamicCoachTip(b.original_bullet)}
+                              <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl rounded-tl-none px-4 py-3 text-sm text-rose-100 flex-1">
+                                <p className="mb-2">{getDynamicCoachTip(b.original_bullet)}</p>
+                                <div className="bg-[#111118] border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-slate-200 break-words">
+                                  {getPasteReadyRewrite(b.original_bullet)}
+                                </div>
+                                <div className="mt-2 flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const tip = getPasteReadyRewrite(b.original_bullet);
+                                      navigator.clipboard.writeText(tip);
+                                      setCopiedCoachTip(tip);
+                                      setTimeout(() => setCopiedCoachTip(null), 1500);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-indigo-200 transition-colors"
+                                  >
+                                    {copiedCoachTip === getPasteReadyRewrite(b.original_bullet) ? (
+                                      <>
+                                        <Check className="w-3.5 h-3.5" />
+                                        Copied
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3.5 h-3.5" />
+                                        Copy rewrite
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
