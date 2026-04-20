@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Gem, Menu, X } from "lucide-react";
+import { FileText, Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "Features", href: "#features" },
@@ -32,7 +32,7 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <Gem className="w-4 h-4 text-white" />
+            <FileText className="w-4 h-4 text-white" />
           </div>
           <span className="text-white font-bold text-lg tracking-tight">ResumeKosha</span>
         </div>

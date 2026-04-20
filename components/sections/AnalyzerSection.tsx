@@ -11,6 +11,7 @@ import {
   FileText,
   Send,
   Sparkles,
+  MessageSquareText,
 } from "lucide-react";
 import { ScoreRing } from "@/components/ui/score-ring";
 import type { ATSResult } from "@/lib/types";
@@ -33,6 +34,14 @@ function getDynamicCoachTip(bullet: string): string {
 }
 
 export function AnalyzerSection() {
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
+    {
+      role: "assistant",
+      content: "Ask me anything about your resume. I can suggest rewrites, explain blind spots, and improve bullet impact.",
+    },
+  ]);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState("");
   const [targetRole, setTargetRole] = useState("");
@@ -73,6 +82,13 @@ export function AnalyzerSection() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Analysis failed");
       setResult(data);
+      setChatMessages([
+        {
+          role: "assistant",
+          content:
+            "Analysis ready. Ask me to improve any bullet, explain your blind spots, or tailor your resume for a specific role/company.",
+        },
+      ]);
       setActiveTab("overview");
     } catch (e: any) {
       setError(e?.name === "AbortError" ? "Analysis timed out. Please try again." : e.message);
@@ -110,7 +126,7 @@ export function AnalyzerSection() {
               `Email Teaser:\n${result.email_marketing.freemium_teaser_copy}`
           );
           window.location.href = `mailto:${emailTo}?subject=${subject}&body=${body}`;
-          setEmailMessage("Opened your email app because SMTP is not configured on server.");
+          setEmailMessage("");
           return;
         }
         throw new Error(data.error || "Could not send report.");
@@ -170,6 +186,38 @@ export function AnalyzerSection() {
   const toggleTip = (tip: string) => {
     setSelectedTips((prev) => (prev.includes(tip) ? prev.filter((x) => x !== tip) : [...prev, tip]));
   };
+
+  async function askCoach() {
+    const question = chatInput.trim();
+    if (!question || !result || chatLoading) return;
+
+    const nextMessages = [...chatMessages, { role: "user" as const, content: question }];
+    setChatMessages(nextMessages);
+    setChatInput("");
+    setChatLoading(true);
+
+    try {
+      const res = await fetch("/api/chat-coach", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          history: nextMessages,
+          result,
+        }),
+      });
+      const data = await res.json();
+      const answer = data?.answer || "I couldn't generate a reply just now.";
+      setChatMessages((prev) => [...prev, { role: "assistant", content: answer }]);
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Temporary issue. Please ask again." },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
 
   return (
     <section id="analyzer" className="py-32 relative scroll-mt-28">
@@ -235,7 +283,7 @@ export function AnalyzerSection() {
             value={jobDescription}
             onChange={(e) => setJobDescription(e.target.value)}
             rows={5}
-            placeholder="Optional: paste target job description for semantic matching"
+            placeholder="Optional: paste target job description"
             className="mt-3 w-full bg-[#111118] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 resize-none focus:outline-none focus:border-indigo-500/50"
           />
         </div>
@@ -523,6 +571,45 @@ export function AnalyzerSection() {
                         </div>
                       )
                     )}
+                    <div className="bg-[#0a0a0f] rounded-xl p-5 border border-white/5">
+                      <div className="flex items-center gap-2 mb-4">
+                        <MessageSquareText className="w-4 h-4 text-indigo-300" />
+                        <span className="text-sm font-semibold text-white">Interactive AI Coach</span>
+                      </div>
+                      <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                        {chatMessages.map((m, idx) => (
+                          <div key={`${m.role}-${idx}`} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                            <div
+                              className={`max-w-[85%] text-sm rounded-xl px-4 py-3 ${
+                                m.role === "user"
+                                  ? "bg-indigo-600 text-white"
+                                  : "bg-[#111118] border border-white/10 text-slate-200"
+                              }`}
+                            >
+                              {m.content}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <input
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") askCoach();
+                          }}
+                          placeholder="Ask coach: 'Rewrite bullet 2 for Product Manager at IBM'"
+                          className="flex-1 bg-[#111118] border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50"
+                        />
+                        <button
+                          onClick={askCoach}
+                          disabled={chatLoading || !chatInput.trim()}
+                          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                        >
+                          {chatLoading ? "Thinking..." : "Ask"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
 
